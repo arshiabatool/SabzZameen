@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Crop Map with Legend</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    #header {
+      background-color: rgb(199, 199, 199);
+      color: rgb(8, 8, 8);
+      text-align: center;
+      padding: 10px 0;
+      font-size: 20px;
+    }
+
+    #map {
+      height: calc(100vh - 60px); /* Adjust map height to take up the remaining space */
+    }
+
+    .legend {
+      background: rgb(199, 199, 199);
+      line-height: 1.5em;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.8;
+    }
+
+    #footer {
+      background-color: rgb(199, 199, 199);
+      color: rgb(8, 8, 8);
+      text-align: center;
+      padding: 5px 0;
+      font-size: 10px; /* Small font size */
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header Section -->
+  <div id="header">
+    SabzZameen - Helping You Understand Crop Distribution Across Pakistan
+  </div>
+
+  <!-- Map Section -->
+  <div id="map"></div>
+
+  <!-- Footer Section -->
+  <div id="footer">
+    Department of Space Science- IST
+  </div>
+
+  <script>
+    // Initialize map
+    var map = L.map('map').setView([30.7, 73.3], 6);
+
+    // Add OpenStreetMap base layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    // Define colors for each crop
+    const cropColors = {
+      "Wheat": "#FFFF00",              // Yellow 🌾
+      "Rapeseed-Mustard": "#800080",   // Purple 🌿
+      "Maize": "#00FF00",              // Green 🌽
+      "Chickpea (Gram)": "#0000FF",    // Blue 🌱
+      "Sugarcane": "#FFA500",          // Orange 🍃
+      "Other": "#FF0000"               // Red 🟫
+    };
+
+    // Load GeoJSON file
+    fetch('web.geojson')
+      .then(response => response.json())
+      .then(data => {
+        console.log("Loaded GeoJSON:", data);
+
+        var geoLayer = L.geoJSON(data, {
+          style: function(feature) {
+            let crop = feature.properties['Descriptio']; // Use 'Descriptio' for crop name
+            let color = cropColors[crop] || cropColors["Other"];
+            return {
+              color: "#333",
+              fillColor: color,
+              weight: 1,
+              fillOpacity: 0.7
+            };
+          },
+          pointToLayer: function (feature, latlng) {
+            let crop = feature.properties['Descriptio']; // Use 'Descriptio' for crop name
+            let color = cropColors[crop] || cropColors["Other"];
+            return L.circleMarker(latlng, {
+              radius: 6,
+              fillColor: color,
+              color: "#333",
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.9
+            });
+          },
+          onEachFeature: function (feature, layer) {
+            let props = feature.properties;
+            let crop = props['Descriptio']; // Crop name from 'Descriptio' field
+            let lat = feature.geometry.coordinates[1];  // Latitude (second index)
+            let lng = feature.geometry.coordinates[0];  // Longitude (first index)
+
+            layer.bindPopup(
+              `<b>Province:</b> ${props.Province}<br>
+               <b>District:</b> ${props.District}<br>
+               <b>Latitude:</b> ${lat}<br>
+               <b>Longitude:</b> ${lng}<br>
+               <b>Crop Type:</b> ${crop}`
+            );
+          }
+        }).addTo(map);
+
+        map.fitBounds(geoLayer.getBounds());
+      })
+      .catch(error => {
+        console.error("Error loading GeoJSON:", error);
+      });
+
+    // Add legend to map
+    var legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function (map) {
+      var div = L.DomUtil.create('div', 'legend');
+      div.innerHTML += `<i style="background:${cropColors["Wheat"]}"></i> Wheat 🌾<br>`;
+      div.innerHTML += `<i style="background:${cropColors["Rapeseed-Mustard"]}"></i> Rapeseed-Mustard 🌿<br>`;
+      div.innerHTML += `<i style="background:${cropColors["Maize"]}"></i> Maize 🌽<br>`;
+      div.innerHTML += `<i style="background:${cropColors["Chickpea (Gram)"]}"></i> Chickpea (Gram) 🌱<br>`;
+      div.innerHTML += `<i style="background:${cropColors["Sugarcane"]}"></i> Sugarcane 🍃<br>`;
+      div.innerHTML += `<i style="background:${cropColors["Other"]}"></i> Other Crops  🟫<br>`;
+      return div;
+    };
+    legend.addTo(map);
+  </script>
+</body>
+</html>
